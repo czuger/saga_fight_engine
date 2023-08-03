@@ -69,9 +69,11 @@ class TestBattleSimulation(unittest.TestCase):
 
             print()
 
+            if band2.band_destroyed():
+                break
+
         for u in band2.units:
             print(u)
-
 
 
 if __name__ == '__main__':

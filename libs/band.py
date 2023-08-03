@@ -5,7 +5,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
 from libs.unit import min_activation_dice
-
+import operator
 from libs.base import Base
 from libs.unit import Unit
 
@@ -16,14 +16,31 @@ class Band(Base):
     id = Column(Integer, primary_key=True)
     units = relationship("Unit", backref="band")
 
+    def band_destroyed(self):
+        destroyed = True
+        for unit in self.units:
+            if not unit.destroyed:
+                destroyed = False
+                break
+
+        return destroyed
+
+    @staticmethod
+    def find_target(current_unit: Unit, other_band: 'Band'):
+        """Find the best target for the unit"""
+        targets = current_unit.targets_in_range(other_band)
+        targets = [(current_unit.target_factor(t), t) for t in targets]
+        targets.sort(key=operator.itemgetter(0))
+        targets.reverse()
+        return targets[0][1]
+
     def turn(self, other_band: 'Band'):
         activation_dice = self.get_activation_dice()
         for unit in self.units:
             if unit.activation(activation_dice):
-                targets = unit.targets_in_range(other_band)
-                if targets:
-                    target = random.choice(targets)
-                    successful_hits = unit.target_factor(target)
+                target = self.find_target(unit, other_band)
+                if target:
+                    successful_hits = unit.compare_dice_with_armor(target)
                     target.amount = max(0, target.amount - successful_hits)
                     if target.amount == 0:
                         target.destroyed = True

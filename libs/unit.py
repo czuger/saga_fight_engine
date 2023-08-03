@@ -75,6 +75,9 @@ class Unit(Base):
                 f"equipment={self.equipment}, position={self.position}, destroyed={self.destroyed})>")
 
     def target_in_range(self, other_unit: 'Unit') -> bool:
+        if other_unit.destroyed:
+            return False
+
         range_limit = 2 if self.can_shoot else 0
         if Equipment.JAVELINS in self.equipment:
             range_limit = 1
@@ -97,6 +100,9 @@ class Unit(Base):
         return successful_hits
 
     def target_factor(self, other_unit: 'Unit') -> float:
+        """This function returns a target factor for a given other unit.
+        The higher the returned value, the more likely is the unit to be shoot
+        """
         weight = sum(equipment_weights[e] for e in self.equipment) * unit_type_weights[self.unit_type]
         target_weight = sum(equipment_weights[e] for e in other_unit.equipment) * unit_type_weights[
             other_unit.unit_type]
