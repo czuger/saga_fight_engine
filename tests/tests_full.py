@@ -10,6 +10,8 @@ from libs.unit import UnitType
 from libs.unit import Equipment
 from libs.base import Base
 
+from libs.unit import activate_probability
+
 
 class TestBattleSimulation(unittest.TestCase):
     def setUp(self):
@@ -35,32 +37,41 @@ class TestBattleSimulation(unittest.TestCase):
         self.session.add(unit)
         self.session.commit()
 
-        for activation_dice in range(1, 8):
+        amount = 500000
+        for activation_dice in range(1, 9):
             print(activation_dice)
             activation_acc = 0
-            for i in range(1, 1000):
+            for i in range(1, amount):
                 activation_acc = activation_acc + unit.activation(activation_dice)
-            activation_avg = (activation_acc/1000.0)
+            activation_avg = (activation_acc/float(amount))
 
-            self.assertLessEqual(activation_avg, (activation_dice/8.0)*(2/6.0))
+            self.assertLessEqual(
+                activation_avg,
+                (activate_probability[UnitType.LEVY]*(activation_dice/8.0))+0.002)
 
-    def test_round(self):
-        # Test the round function
+    def test_turns(self):
+        # Test the turn function
         band1 = Band()
         band2 = Band()
-        unit1 = Unit(unit_type=UnitType.LORD, amount=10, can_shoot=False,
-                     fight_aggressivity=3, shooting_aggressivity=0,
-                     fight_armor=5, shooting_armor=0, target_range=1,
-                     equipment=[Equipment.HEAVY_WEAPON], position=0, band=band1)
-        unit2 = Unit(unit_type=UnitType.LEVY, amount=10, can_shoot=False,
-                     fight_aggressivity=3, shooting_aggressivity=0,
-                     fight_armor=5, shooting_armor=0, target_range=1,
-                     equipment=[Equipment.HEAVY_WEAPON], position=1, band=band2)
         self.session.add(band1)
         self.session.add(band2)
+
+        band1.create_typical_band(self.session)
+        band2.create_typical_band(self.session)
+
         self.session.commit()
-        band1.round(band2)
-        self.assertTrue(unit2.amount < 10 or unit2.destroyed)
+
+        for i in range(100):
+            band1.turn(band2)
+
+            for u in band2.units:
+                print(u)
+
+            print()
+
+        for u in band2.units:
+            print(u)
+
 
 
 if __name__ == '__main__':

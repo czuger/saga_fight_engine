@@ -63,9 +63,16 @@ class Unit(Base):
     fight_armor = Column(Integer)
     shooting_armor = Column(Integer)
     target_range = Column(Integer)
-    equipment = Column(JSON)
-    position = Column(Integer)
+    equipment = Column(JSON, default=[])
+    position = Column(Integer, default=1)
     destroyed = Column(Boolean, default=False)
+
+    def __repr__(self) -> str:
+        return (f"<Unit(id={self.id}, unit_type={self.unit_type}, amount={self.amount}, "
+                f"can_shoot={self.can_shoot}, fight_aggressivity={self.fight_aggressivity}, "
+                f"shooting_aggressivity={self.shooting_aggressivity}, fight_armor={self.fight_armor}, "
+                f"shooting_armor={self.shooting_armor}, target_range={self.target_range}, "
+                f"equipment={self.equipment}, position={self.position}, destroyed={self.destroyed})>")
 
     def target_in_range(self, other_unit: 'Unit') -> bool:
         range_limit = 2 if self.can_shoot else 0
@@ -81,7 +88,7 @@ class Unit(Base):
         armor = other_unit.shooting_armor if self.can_shoot else other_unit.fight_armor
         defense_threshold = 4 if self.can_shoot else 5
         successful_hits = 0
-        for _ in range(num_rolls):
+        for _ in range(int(num_rolls)):
             score = random.randint(1, 6)
             if Equipment.HEAVY_WEAPON in self.equipment:
                 score += 1
@@ -97,3 +104,48 @@ class Unit(Base):
 
     def activation(self, activation_dice_amount: int) -> bool:
         return random.random() <= activate_probability[self.unit_type] * (activation_dice_amount / 8.0)
+
+    # Typical units
+    def turn_to_levy(self):
+        self.unit_type = UnitType.LEVY
+        self.amount = 12
+        self.can_shoot = True
+        self.fight_aggressivity = 1/3.0
+        self.shooting_aggressivity = 1/2.0
+        self.fight_armor = 3
+        self.shooting_armor = 3
+        self.target_range = 2
+        self.equipment = [Equipment.ARCS]
+
+    def turn_to_warriors(self):
+        self.unit_type = UnitType.WARRIOR
+        self.amount = 8
+        self.can_shoot = False
+        self.fight_aggressivity = 1
+        self.shooting_aggressivity = 1/2.0
+        self.fight_armor = 4
+        self.shooting_armor = 4
+        self.target_range = 0
+
+    def turn_to_guards(self):
+        self.unit_type = UnitType.GUARD
+        self.amount = 4
+        self.can_shoot = False
+        self.fight_aggressivity = 2
+        self.shooting_aggressivity = 1
+        self.fight_armor = 5
+        self.shooting_armor = 5
+        self.target_range = 0
+        self.equipment = [Equipment.HORSES]
+
+    def turn_to_lord(self):
+        self.unit_type = UnitType.LORD
+        self.amount = 1
+        self.can_shoot = False
+        self.fight_aggressivity = 8
+        self.shooting_aggressivity = 4
+        # To simulate resistance
+        self.fight_armor = 6
+        self.shooting_armor = 6
+        self.target_range = 0
+        self.equipment = [Equipment.HORSES]
