@@ -1,21 +1,28 @@
-import random
-
-from sqlalchemy import Column, Integer
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
-from libs.unit import min_activation_dice
-import operator
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
+from sqlalchemy.orm import relationship
+from sqlalchemy_utils import database_exists, create_database
+
 from libs.base import Base
 from libs.unit import Unit
+from libs.unit import min_activation_dice
+from sqlalchemy import Column, Boolean, ForeignKey, Integer
 
+import operator
 
 class Band(Base):
     __tablename__ = 'bands'
 
     id = Column(Integer, primary_key=True)
     units = relationship("Unit", backref="band")
+    defender = Column(Boolean, default=False)
 
+    def make_defender(self):
+        self.defender = True
+        for u in self.units:
+            u.position = -u.position
     def band_destroyed(self):
         destroyed = True
         for unit in self.units:
@@ -26,7 +33,7 @@ class Band(Base):
         return destroyed
 
     @staticmethod
-    def find_target(current_unit: Unit, other_band: 'Band'):
+    def find_target(current_unit: Unit, other_band: 'Band') -> Unit:
         """Find the best target for the unit"""
         targets = current_unit.targets_in_range(other_band)
         targets = [(current_unit.target_factor(t), t) for t in targets]
@@ -38,16 +45,28 @@ class Band(Base):
         else:
             return None
 
+    def find_target_and_fight(self, unit, other_band):
+        target = self.find_target(unit, other_band)
+        if target:
+            attack_hits = unit.attack(target)
+            print(f"{unit} attack {target}")
+            if unit.target_range == 0:
+                # This is CAC
+                revenge_hits = target.attack(unit)
+                unit.suffer_hits(revenge_hits)
+            target.suffer_hits(attack_hits)
+            print(f"after attack {target}")
+        else:
+            unit.move(self.defender)
+
     def turn(self, other_band: 'Band'):
         activation_dice = self.get_activation_dice()
+
         for unit in self.units:
             if unit.activation(activation_dice):
-                target = self.find_target(unit, other_band)
-                if target:
-                    successful_hits = unit.compare_dice_with_armor(target)
-                    target.amount = max(0, target.amount - successful_hits)
-                    if target.amount == 0:
-                        target.destroyed = True
+                self.find_target_and_fight(unit, other_band)
+            else:
+                print(f"{unit} failed activation")
 
     def get_activation_dice(self) -> int:
         activation_dice = 0
@@ -76,3 +95,32 @@ class Band(Base):
             unit = Unit(band_id=self.id)
             unit.turn_to_levy()
             db_session.add(unit)
+
+
+if __name__ == '__main__':
+    engine = create_engine('sqlite:///work.db')
+    if not database_exists(engine.url):
+        create_database(engine.url)
+    Base.metadata.create_all(engine)
+    session = Session(engine)
+
+    # Test the turn function
+    band1 = Band()
+    band2 = Band()
+    session.add(band1)
+    session.add(band2)
+
+    band1.create_typical_band(session)
+    band2.create_typical_band(session)
+    band2.make_defender()
+
+    session.commit()
+
+    for i in range(7):
+        print(i)
+        print()
+        band1.turn(band2)
+        print()
+        band2.turn(band1)
+        print()
+

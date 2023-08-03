@@ -1,15 +1,13 @@
 import unittest
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from sqlalchemy_utils import database_exists, create_database, drop_database
-from sqlalchemy.ext.declarative import declarative_base
+
 from libs.band import Band
-from libs.unit import Unit
-
-from libs.unit import UnitType
-from libs.unit import Equipment
 from libs.base import Base
-
+from libs.unit import Unit
+from libs.unit import UnitType
 from libs.unit import activate_probability
 
 
