@@ -64,16 +64,11 @@ class TestBattleSimulation(unittest.TestCase):
         for i in range(100):
             band1.turn(band2)
 
-            for u in band2.units:
-                print(u)
-
-            print()
-
             if band2.band_destroyed():
                 break
 
         for u in band2.units:
-            print(u)
+            self.assertTrue(u.destroyed)
 
 
 if __name__ == '__main__':

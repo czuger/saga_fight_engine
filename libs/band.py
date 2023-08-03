@@ -32,7 +32,11 @@ class Band(Base):
         targets = [(current_unit.target_factor(t), t) for t in targets]
         targets.sort(key=operator.itemgetter(0))
         targets.reverse()
-        return targets[0][1]
+
+        if targets:
+            return targets[0][1]
+        else:
+            return None
 
     def turn(self, other_band: 'Band'):
         activation_dice = self.get_activation_dice()
